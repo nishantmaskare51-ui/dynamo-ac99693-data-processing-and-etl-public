@@ -1,38 +1,59 @@
-artifacts = []  # paths the verifier reads from the agent (e.g. ["/app/output.json"]) — must be above the first [section]
+artifacts = ["/app/output/inventory_normalized.jsonl", "/app/output/rejected_rows.log"]  # paths the verifier reads from the agent
 
 [task]
-name = "dynamo/your-task-name"  # required format: org/name (Harbor needs the slash); name part lowercase kebab-case, <=3 words
-description = ""                 # one-line summary of the task
+name = "dynamo/inventory-format-normalizer"  # required format: org/name
+description = "Normalize a corrupted multi-source inventory export file into clean JSONL"
 
 [metadata]
 # --- Pre-seeded for you when this repo was created — DO NOT EDIT ---
-category = "Data Processing and ETL"                      # diversity category, assigned to your task by the Dynamo team
-subcategory = "File format parsing and serialization"                   # diversity subcategory, assigned by the Dynamo team
+category = "Data Processing and ETL"
+subcategory = "File format parsing and serialization"
 # --- Fixed for this dataset — LEAVE AS-IS ---
-model_tested = "Opus-4.8"           # difficulty-benchmarking model (do not change)
-agent_tested = "Terminus-2"        # difficulty-benchmarking agent (do not change)
+model_tested = "Opus-4.8"
+agent_tested = "Terminus-2"
 # --- You fill these in ---
-# task_objective / artifact_type: pick from .dynamo/diversity-taxonomy.toml (lowercase snake_case).
-task_objective = []                # e.g. ["implement", "debug"]
-artifact_type = []                 # e.g. ["codebase", "configuration_file"]
-expert_time_estimate_hours = 0     # best-case hours for a focused domain expert with the intended insight
-difficulty_explanation = ""        # why this task is hard for agents and humans
-solution_explanation = ""          # high-level approach and key insights
-verification_explanation = ""      # how the tests verify correctness
+task_objective = ["implement", "transform", "validate"]
+artifact_type = ["single_script_or_program", "dataset_or_tabular_file", "test_suite_or_benchmark"]
+expert_time_estimate_hours = 3.5
+difficulty_explanation = """
+The core difficulty is not any single transformation but their interaction: encoding
+detection must happen per-row (not per-file) since rows from different source systems
+are mixed within one file; date normalization requires disambiguating three formats
+without explicit markers; and truncated/malformed rows must be detected structurally
+(field count, JSON validity) before parsing, not via exception-driven control flow,
+since a naive implementation will either crash on the first bad row or silently
+corrupt data by mis-parsing it. Getting all of this correct simultaneously, on data
+that fails in multiple independent ways per row, is what separates a robust ETL
+implementation from a brittle one.
+"""
+solution_explanation = """
+Process the file line-by-line as raw bytes rather than assuming a single encoding.
+For each line: attempt UTF-8 decode, fall back to cp1252/Latin-1 on failure. Validate
+field count against the expected pipe-delimited schema before attempting to parse the
+embedded JSON blob; route rows that fail this check to rejected_rows.log rather than
+raising. Use a small format-fingerprint function to disambiguate MM/DD/YYYY,
+DD-MM-YYYY, and epoch-seconds date fields. Deduplicate using a set of composite keys
+(store_id, sku, export_ts) before emitting final output.
+"""
+verification_explanation = """
+The reference solution's output is compared field-by-field against the agent's
+inventory_normalized.jsonl after canonical key-sorting. Row counts for both valid and
+rejected records are checked exactly against known ground-truth counts baked into the
+input fixture. A second hidden input file with the same corruption patterns but
+different data is also run to catch overfit/hardcoded solutions.
+"""
 
 [verifier]
-timeout_sec = 120.0                # increase based on your test suite's runtime demands
-# Canonical TB2: the verifier runs in the environment image (no separate tests/Dockerfile).
-# Harbor overlays tests/ at verify time; leave environment_mode unset for this shared model.
+timeout_sec = 180.0
 
 [agent]
-timeout_sec = 120.0                # raise for hard tasks — agents may run for many minutes or hours
+timeout_sec = 1800.0
 
 [environment]
-build_timeout_sec = 600.0          # max seconds for the Docker build
-cpus = 1                           # increase for parallel/compute-heavy workloads
-memory_mb = 2048                   # increase for large datasets or in-memory processing
-storage_mb = 10240                 # increase for tasks with large files or build artifacts
-gpus = 0                           # max 1, expect H100
-allow_internet = true              # open internet is available to the agent
-mcp_servers = []                   # optional MCP servers to expose to the agent
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 10240
+gpus = 0
+allow_internet = true
+mcp_servers = []
