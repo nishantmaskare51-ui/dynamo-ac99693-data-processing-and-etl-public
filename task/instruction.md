@@ -1,17 +1,31 @@
-<!--
-  This file is the PROMPT handed verbatim to the model that will attempt your task.
-  Replace everything in this comment with your task instruction, then delete the comment.
+# Normalize a Corrupted Multi-Source Inventory Export
 
-  Guidelines:
-  - Write it yourself, as a domain expert. Do NOT generate it with an LLM.
-  - It's a prompt, not a document — no title, no section headers, no excessive Markdown.
-  - Write it the way you'd brief a skilled colleague.
-  - Use absolute paths (e.g. /app/output.txt), never relative paths.
-  - Be explicit about every expected output file and its exact format/schema.
-  - Include everything the agent needs to solve the task — and nothing more (don't
-    hint at or reveal your solution).
-  - Keep it concise (<= 1500 tokens). State the goal and required outputs; skip
-    backstory, roleplay, and filler.
--->
+You are given a legacy inventory export file at `/app/data/inventory_export.dat`. It
+was produced by merging pipe-delimited (`|`) exports from three different point-of-
+sale systems, and the merge introduced several data-quality problems that you must
+handle correctly.
 
-Replace this file with your task instruction.
+## Known issues in the input file
+
+- **Mixed encodings**: some rows are UTF-8, others are Latin-1 (cp1252), mixed within
+  the same file with no per-row marker.
+- **Inconsistent dates**: the `export_ts` field appears in one of three formats:
+  `MM/DD/YYYY`, `DD-MM-YYYY`, or Unix epoch seconds (as a string of digits).
+- **Malformed embedded JSON**: the `extra_attrs` column contains a JSON blob that is
+  sometimes single-quoted, sometimes double-quoted, and sometimes truncated
+  (missing closing braces).
+- **Duplicate rows**: some rows are byte-for-byte duplicates (retry artifacts). Treat
+  two rows as duplicates if they share the same `(store_id, sku, export_ts)` after
+  normalization.
+- **Inconsistent nulls**: the `quantity` field may be an empty string, the literal
+  text `NULL`, `-1`, or `N/A` to represent a missing value.
+- **Truncated rows**: a small number of rows are cut off mid-line (incomplete
+  export) and do not have the full expected number of pipe-delimited fields.
+
+## What to build
+
+Write a program that reads `/app/data/inventory_export.dat` and produces two output
+files:
+
+1. `/app/output/inventory_normalized.jsonl` — newline-delimited JSON, one object per
+   valid, deduplicated record, with exactly this schema:
