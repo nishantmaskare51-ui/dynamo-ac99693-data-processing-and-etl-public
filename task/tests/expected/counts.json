@@ -1,0 +1,8 @@
+{
+  "n_valid_unique": 40,
+  "n_duplicates": 6,
+  "n_truncated": 3,
+  "n_badjson": 2,
+  "n_rejected_total": 5,
+  "n_total_lines_in_file": 52
+}
