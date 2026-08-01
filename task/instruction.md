@@ -30,3 +30,4 @@ files:
 1. `/app/output/inventory_normalized.jsonl` — newline-delimited JSON, one object per
    valid, deduplicated record, with exactly this schema:
 2. `/app/run.sh` — an executable entry point (no arguments) that produces the two files above when invoked.
+
