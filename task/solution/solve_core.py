@@ -1,163 +1,185 @@
 #!/usr/bin/env python3
 """
-Reference (Oracle) solution.
+Reference (oracle) implementation.
 
 Reads /app/data/inventory_export.dat and writes:
   /app/output/inventory_normalized.jsonl
   /app/output/rejected_rows.log
+
+Design note: this parses the pipe-delimited feed using the stdlib `csv` module
+with a custom Dialect (rather than manual str.split), and represents each
+candidate record as a small state machine (RecordBuilder) that accumulates
+failures instead of raising early -- this keeps every field's validation
+independent so a single bad field doesn't mask what else is wrong with a row.
 """
+import csv
+import io
 import json
 import re
-import sys
 import datetime
 
-INPUT_PATH = "/app/data/inventory_export.dat"
-OUT_JSONL = "/app/output/inventory_normalized.jsonl"
-OUT_REJECTED = "/app/output/rejected_rows.log"
+SRC = "/app/data/inventory_export.dat"
+DST_OK = "/app/output/inventory_normalized.jsonl"
+DST_BAD = "/app/output/rejected_rows.log"
 
-EXPECTED_FIELDS = 5
-NULL_REPRS = {"", "NULL", "N/A", "-1"}
+COLUMNS = ("store_id", "sku", "quantity", "export_ts", "extra_attrs")
+NULLISH = frozenset({"", "NULL", "N/A", "-1"})
 
-
-def decode_line(raw_bytes):
-    """Try utf-8, fall back to latin-1/cp1252."""
-    try:
-        return raw_bytes.decode("utf-8")
-    except UnicodeDecodeError:
-        return raw_bytes.decode("cp1252", errors="replace")
+_EPOCH_RE = re.compile(r"^\d{9,10}$")
+_MDY_RE = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
+_DMY_RE = re.compile(r"^(\d{1,2})-(\d{1,2})-(\d{4})$")
 
 
-def parse_date(date_str):
-    """Return an ISO-8601 UTC-midnight string, or None if unparseable."""
-    date_str = date_str.strip()
-    # epoch seconds: all digits
-    if re.fullmatch(r"\d{9,10}", date_str):
+class PipeDialect(csv.Dialect):
+    delimiter = "|"
+    quoting = csv.QUOTE_NONE
+    lineterminator = "\n"
+    escapechar = None
+
+
+def sniff_and_decode(raw: bytes) -> str:
+    """utf-8 first; cp1252 as the fallback encoding for legacy POS exports."""
+    for codec in ("utf-8", "cp1252"):
         try:
-            dt = datetime.datetime.fromtimestamp(int(date_str), tz=datetime.timezone.utc)
-            return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-        except (ValueError, OSError):
-            return None
-    # MM/DD/YYYY
-    m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{4})", date_str)
-    if m:
-        mm, dd, yyyy = map(int, m.groups())
+            return raw.decode(codec)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", errors="replace")
+
+
+class RecordBuilder:
+    """Accumulates one row's parsed fields; ok() is False if anything failed."""
+
+    def __init__(self, fields):
+        self.fields = fields
+        self.errors = []
+        self.store_id = None
+        self.sku = None
+        self.quantity = None
+        self.export_ts = None
+        self.attrs = None
+
+    def ok(self):
+        return not self.errors
+
+    def run(self):
+        if len(self.fields) != len(COLUMNS):
+            self.errors.append("field_count")
+            return self
+        store_id, sku, qty_raw, date_raw, attrs_raw = self.fields
+        self.store_id, self.sku = store_id, sku
+        self._resolve_quantity(qty_raw)
+        self._resolve_timestamp(date_raw)
+        self._resolve_attrs(attrs_raw)
+        return self
+
+    def _resolve_quantity(self, raw):
+        raw = raw.strip()
+        if raw in NULLISH:
+            self.quantity = None
+            return
+        try:
+            self.quantity = int(raw)
+        except ValueError:
+            self.errors.append("quantity")
+
+    def _resolve_timestamp(self, raw):
+        raw = raw.strip()
+        m = _EPOCH_RE.match(raw)
+        if m:
+            try:
+                dt = datetime.datetime.fromtimestamp(int(raw), tz=datetime.timezone.utc)
+                self.export_ts = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+                return
+            except (ValueError, OSError):
+                pass
+        m = _MDY_RE.match(raw)
+        if m:
+            mm, dd, yyyy = (int(x) for x in m.groups())
+            self._set_date(yyyy, mm, dd)
+            return
+        m = _DMY_RE.match(raw)
+        if m:
+            dd, mm, yyyy = (int(x) for x in m.groups())
+            self._set_date(yyyy, mm, dd)
+            return
+        self.errors.append("timestamp")
+
+    def _set_date(self, yyyy, mm, dd):
         try:
             dt = datetime.datetime(yyyy, mm, dd)
-            return dt.strftime("%Y-%m-%dT00:00:00Z")
+            self.export_ts = dt.strftime("%Y-%m-%dT00:00:00Z")
         except ValueError:
-            return None
-    # DD-MM-YYYY
-    m = re.fullmatch(r"(\d{1,2})-(\d{1,2})-(\d{4})", date_str)
-    if m:
-        dd, mm, yyyy = map(int, m.groups())
+            self.errors.append("timestamp")
+
+    def _resolve_attrs(self, raw):
+        # trailing " [note-###]" style suffix is decorative and not JSON
+        cutoff = raw.rfind(" [")
+        blob = raw[:cutoff] if cutoff != -1 and raw.rstrip().endswith("]") else raw
+        blob = blob.strip()
+
+        for candidate in (blob, blob.replace("'", '"')):
+            try:
+                parsed = json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(parsed, dict):
+                self.attrs = parsed
+                return
+        self.errors.append("attrs")
+
+    def as_record(self):
+        return {
+            "store_id": self.store_id,
+            "sku": self.sku,
+            "quantity": self.quantity,
+            "export_ts": self.export_ts,
+            "extra_attrs": self.attrs,
+        }
+
+    def dedupe_key(self):
+        return (self.store_id, self.sku, self.export_ts)
+
+
+def iter_rows(path):
+    with open(path, "rb") as fh:
+        body = fh.read()
+    lines = [ln for ln in body.split(b"\n") if ln.strip() != b""]
+    if lines:
+        lines = lines[1:]  # header
+    for raw_line in lines:
+        text = sniff_and_decode(raw_line)
+        reader = csv.reader(io.StringIO(text), dialect=PipeDialect)
         try:
-            dt = datetime.datetime(yyyy, mm, dd)
-            return dt.strftime("%Y-%m-%dT00:00:00Z")
-        except ValueError:
-            return None
-    return None
-
-
-def parse_quantity(qty_str):
-    """Returns (ok, value). value is None for a recognized null representation."""
-    s = qty_str.strip()
-    if s in NULL_REPRS:
-        return True, None
-    try:
-        return True, int(s)
-    except ValueError:
-        return False, None
-
-
-def extract_attrs(attrs_blob):
-    """
-    attrs_blob may have trailing ' [note-123]' junk appended (from the fixture);
-    strip anything from the last ' [' onward before parsing.
-    Returns (ok, dict_or_None).
-    """
-    blob = attrs_blob
-    idx = blob.rfind(" [")
-    if idx != -1 and blob.rstrip().endswith("]"):
-        blob = blob[:idx]
-    blob = blob.strip()
-
-    # try strict JSON first
-    try:
-        obj = json.loads(blob)
-        if isinstance(obj, dict):
-            return True, obj
-    except json.JSONDecodeError:
-        pass
-
-    # try repairing single-quoted, Python-dict-style JSON
-    repaired = blob.replace("'", '"')
-    try:
-        obj = json.loads(repaired)
-        if isinstance(obj, dict):
-            return True, obj
-    except json.JSONDecodeError:
-        pass
-
-    return False, None
+            fields = next(reader)
+        except StopIteration:
+            fields = []
+        yield text, fields
 
 
 def main():
-    with open(INPUT_PATH, "rb") as f:
-        raw_lines = f.read().split(b"\n")
+    seen = set()
+    accepted = []
+    rejected = []
 
-    # drop header + trailing empty line(s)
-    lines = [l for l in raw_lines if l.strip() != b""]
-    if lines:
-        lines = lines[1:]  # drop header row
-
-    valid_records = []
-    rejected_raw_lines = []
-    seen_keys = set()
-
-    for raw in lines:
-        text = decode_line(raw)
-        fields = text.split("|")
-        if len(fields) != EXPECTED_FIELDS:
-            rejected_raw_lines.append(text)
+    for original_text, fields in iter_rows(SRC):
+        rec = RecordBuilder(fields).run()
+        if not rec.ok():
+            rejected.append(original_text)
             continue
-
-        store_id, sku, qty_str, date_str, attrs_blob = fields
-
-        ts = parse_date(date_str)
-        if ts is None:
-            rejected_raw_lines.append(text)
+        key = rec.dedupe_key()
+        if key in seen:
             continue
+        seen.add(key)
+        accepted.append(rec.as_record())
 
-        qty_ok, qty_val = parse_quantity(qty_str)
-        if not qty_ok:
-            rejected_raw_lines.append(text)
-            continue
+    with open(DST_OK, "w") as fh:
+        for rec in accepted:
+            fh.write(json.dumps(rec, sort_keys=True) + "\n")
 
-        attrs_ok, attrs_val = extract_attrs(attrs_blob)
-        if not attrs_ok:
-            rejected_raw_lines.append(text)
-            continue
-
-        key = (store_id, sku, ts)
-        if key in seen_keys:
-            continue  # duplicate -- silently drop, not rejected
-        seen_keys.add(key)
-
-        valid_records.append({
-            "store_id": store_id,
-            "sku": sku,
-            "quantity": qty_val,
-            "export_ts": ts,
-            "extra_attrs": attrs_val,
-        })
-
-    with open(OUT_JSONL, "w") as f:
-        for rec in valid_records:
-            f.write(json.dumps(rec, sort_keys=True) + "\n")
-
-    with open(OUT_REJECTED, "w") as f:
-        for line in rejected_raw_lines:
-            f.write(line + "\n")
+    with open(DST_BAD, "w") as fh:
+        for line in rejected:
+            fh.write(line + "\n")
 
 
 if __name__ == "__main__":
