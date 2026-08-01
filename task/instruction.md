@@ -31,3 +31,4 @@ files:
    valid, deduplicated record, with exactly this schema:
    
 2. `/app/run.sh` — an executable entry point (no arguments) that produces the two files above when invoked.
+
