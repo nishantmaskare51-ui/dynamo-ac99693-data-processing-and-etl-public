@@ -2,6 +2,7 @@ store_id|sku|quantity|export_ts|extra_attrs
 ST003|SKU-00009
 ST001|SKU-00059|99|1780444800|{'warehouse': 'A', 'batch': 88} [café-564]
 ST001|SKU-00010|468|17-03-2026|{"warehouse": "C", "batch": 94} [note-753]
+ST001|SKU-00010|999|17-03-2026|{"warehouse": "Z"} [note-001]
 ST006|SKU-00057|409|26-07-2026|{'warehouse': 'B', 'batch': 85} [café-122]
 ST006|SKU-00048|134|1791849600|{'warehouse': 'A', 'batch': 91} [café-175]
 ST001|SKU-00049||11/05/2026|{"warehouse": "B", "batch": 56} [café-178]
