@@ -1,34 +1,18 @@
-# Normalize a Corrupted Multi-Source Inventory Export
+You are given a legacy inventory export file at /app/data/inventory_export.dat. It was produced by merging pipe-delimited (|) exports from three different point-of-sale systems, and the merge introduced several data-quality problems you must handle correctly. The file has a header line (store_id|sku|quantity|export_ts|extra_attrs) followed by one record per line.
 
-You are given a legacy inventory export file at `/app/data/inventory_export.dat`. It
-was produced by merging pipe-delimited (`|`) exports from three different point-of-
-sale systems, and the merge introduced several data-quality problems that you must
-handle correctly.
+Known issues in the input file: some rows are UTF-8, others are Latin-1 (cp1252), mixed within the same file with no per-row marker. The export_ts field appears in one of three formats: MM/DD/YYYY, DD-MM-YYYY, or Unix epoch seconds (a bare string of 9-10 digits), with no marker of which format a given row uses. The extra_attrs column holds a JSON object that is sometimes single-quoted, sometimes double-quoted, and sometimes has a decorative, non-JSON suffix appended after the closing brace, like " [note-945]" or " [café-221]" — strip that suffix before parsing. Some rows are byte-for-byte duplicates (retry artifacts); treat two rows as duplicates if they share the same (store_id, sku, export_ts) after normalization, and keep only one. The quantity field may be an empty string, the literal text NULL, N/A, or -1 to represent a missing value. A small number of rows are cut off mid-line and do not have the full 5 pipe-delimited fields.
 
-## Known issues in the input file
+Build a program that reads /app/data/inventory_export.dat and produces exactly these outputs:
 
-- **Mixed encodings**: some rows are UTF-8, others are Latin-1 (cp1252), mixed within
-  the same file with no per-row marker.
-- **Inconsistent dates**: the `export_ts` field appears in one of three formats:
-  `MM/DD/YYYY`, `DD-MM-YYYY`, or Unix epoch seconds (as a string of digits).
-- **Malformed embedded JSON**: the `extra_attrs` column contains a JSON blob that is
-  sometimes single-quoted, sometimes double-quoted, and sometimes truncated
-  (missing closing braces).
-- **Duplicate rows**: some rows are byte-for-byte duplicates (retry artifacts). Treat
-  two rows as duplicates if they share the same `(store_id, sku, export_ts)` after
-  normalization.
-- **Inconsistent nulls**: the `quantity` field may be an empty string, the literal
-  text `NULL`, `-1`, or `N/A` to represent a missing value.
-- **Truncated rows**: a small number of rows are cut off mid-line (incomplete
-  export) and do not have the full expected number of pipe-delimited fields.
+/app/output/inventory_normalized.jsonl — newline-delimited JSON, one object per valid, deduplicated record (any key order), containing exactly these five keys:
+- store_id: string, copied as-is.
+- sku: string, copied as-is.
+- quantity: integer, or null if the raw value was "", "NULL", "N/A", or "-1". Any other non-integer value makes the row invalid.
+- export_ts: normalized to ISO-8601 UTC formatted exactly as YYYY-MM-DDTHH:MM:SSZ. Calendar-date inputs (MM/DD/YYYY or DD-MM-YYYY) become that date at 00:00:00Z; epoch-second inputs convert to their exact UTC time. A value matching none of the three formats, or not a real calendar date, makes the row invalid.
+- extra_attrs: a JSON object, parsed from the blob after handling both quote styles and stripping any trailing decorative suffix. A blob that still doesn't parse as a JSON object (e.g. truncated, missing a closing brace) makes the row invalid.
 
-## What to build
+A row is invalid — and must be excluded from inventory_normalized.jsonl — if it does not split into exactly 5 pipe-delimited fields, or if quantity, export_ts, or extra_attrs fails to parse per the rules above. Skip the header line entirely (it is never valid or invalid data).
 
-Write a program that reads `/app/data/inventory_export.dat` and produces two output
-files:
+/app/output/rejected_rows.log — the original text of every invalid input row (decoded to a normal readable string, not raw bytes), one per line, in any order. Do not include the header line, and do not include rows that were dropped only because they were duplicates of an already-accepted valid row — only rows that failed validation belong here.
 
-1. `/app/output/inventory_normalized.jsonl` — newline-delimited JSON, one object per
-   valid, deduplicated record, with exactly this schema:
-   
-2. `/app/run.sh` — an executable entry point (no arguments) that produces the two files above when invoked.
-
+/app/run.sh — an executable file (no arguments) that reads /app/data/inventory_export.dat fresh each time it is invoked and (re)writes both output files above. It will later be re-run against a different input file with the same corruption patterns but different data placed at the same path, so it must implement the parsing logic generally rather than hardcoding anything specific to the file you were given.
