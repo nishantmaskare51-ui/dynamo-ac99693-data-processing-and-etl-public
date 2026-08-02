@@ -13,18 +13,30 @@ model_tested = "Opus-4.8"
 agent_tested = "Terminus-2"
 # --- You fill these in ---
 task_objective = ["implement", "transform", "validate"]
-artifact_type = ["single_script_or_program", "dataset_or_tabular_file", "test_suite_or_benchmark"]
+artifact_type = ["single_script_or_program", "dataset_or_tabular_file"]
 expert_time_estimate_hours = 3.5
 difficulty_explanation = """
-The core difficulty is not any single transformation but their interaction: encoding
+The core difficulty is not any single transformation but their interaction, plus one
+genuine judgment call that cannot be resolved by a fixed rule alone. Encoding
 detection must happen per-row (not per-file) since rows from different source systems
 are mixed within one file; date normalization requires disambiguating three formats
 without explicit markers; and truncated/malformed rows must be detected structurally
 (field count, JSON validity) before parsing, not via exception-driven control flow,
 since a naive implementation will either crash on the first bad row or silently
-corrupt data by mis-parsing it. Getting all of this correct simultaneously, on data
-that fails in multiple independent ways per row, is what separates a robust ETL
-implementation from a brittle one.
+corrupt data by mis-parsing it. Beyond that, conflicting duplicates (same store_id/
+sku/export_ts key, but disagreeing quantity or extra_attrs) require a resolution
+policy derived from an intermediate computed value -- the parsed completeness of each
+candidate record -- rather than a positional rule like "keep the first" or "keep the
+last"; a solution that hardcodes either positional rule will fail on at least one of
+the two fixtures, since each is constructed so the opposite row wins. Getting all of
+this correct simultaneously, on data that fails in multiple independent ways per row,
+is what separates a robust ETL implementation from a brittle one.
+
+The input fixture is synthetically generated to exhibit these corruption and conflict
+patterns in combination; it is not sourced from a real retailer's export. The task
+mirrors work a data or ETL engineer regularly does when consolidating point-of-sale
+exports from multiple vendors into a single warehouse-ready feed, where each vendor's
+export tool introduces its own encoding, date, and retry/conflict quirks.
 """
 solution_explanation = """
 Process the file line-by-line as raw bytes rather than assuming a single encoding.
@@ -32,15 +44,21 @@ For each line: attempt UTF-8 decode, fall back to cp1252/Latin-1 on failure. Val
 field count against the expected pipe-delimited schema before attempting to parse the
 embedded JSON blob; route rows that fail this check to rejected_rows.log rather than
 raising. Use a small format-fingerprint function to disambiguate MM/DD/YYYY,
-DD-MM-YYYY, and epoch-seconds date fields. Deduplicate using a set of composite keys
-(store_id, sku, export_ts) before emitting final output.
+DD-MM-YYYY, and epoch-seconds date fields. Group by the composite key (store_id, sku,
+export_ts); when two parsed records share a key but disagree in content, keep the one
+with the higher (extra_attrs key count, has-non-null-quantity) completeness score
+rather than a positional first/last rule, breaking any remaining tie by file order.
 """
 verification_explanation = """
 The reference solution's output is compared field-by-field against the agent's
 inventory_normalized.jsonl after canonical key-sorting. Row counts for both valid and
 rejected records are checked exactly against known ground-truth counts baked into the
 input fixture. A second hidden input file with the same corruption patterns but
-different data is also run to catch overfit/hardcoded solutions.
+different data is also run to catch overfit/hardcoded solutions; the public and
+hidden fixtures each contain one conflicting-duplicate pair where the opposite row
+(first vs. second in file order) is the more complete one, so a solution that
+hardcodes a positional tie-break instead of computing completeness will fail on at
+least one fixture.
 """
 
 [verifier]
