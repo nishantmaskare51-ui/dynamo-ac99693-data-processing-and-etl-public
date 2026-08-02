@@ -140,6 +140,13 @@ class RecordBuilder:
     def dedupe_key(self):
         return (self.store_id, self.sku, self.export_ts)
 
+    def completeness_score(self):
+        """(populated attrs key count, has-non-null-quantity) — used to resolve
+        conflicting duplicates that share a key but disagree in content."""
+        attrs_count = len(self.attrs) if self.attrs else 0
+        has_qty = 1 if self.quantity is not None else 0
+        return (attrs_count, has_qty)
+
 
 def iter_rows(path):
     with open(path, "rb") as fh:
@@ -158,8 +165,8 @@ def iter_rows(path):
 
 
 def main():
-    seen = set()
-    accepted = []
+    best = {}  # key -> RecordBuilder currently kept for that key
+    order = []  # preserves first-seen order of keys for stable output ordering
     rejected = []
 
     for original_text, fields in iter_rows(SRC):
@@ -168,14 +175,19 @@ def main():
             rejected.append(original_text)
             continue
         key = rec.dedupe_key()
-        if key in seen:
+        if key not in best:
+            best[key] = rec
+            order.append(key)
             continue
-        seen.add(key)
-        accepted.append(rec.as_record())
+        # Conflicting duplicate: same key, different content. Keep whichever
+        # record is more complete rather than always keeping the first-seen
+        # one, so a later row can legitimately override an earlier one.
+        if rec.completeness_score() > best[key].completeness_score():
+            best[key] = rec
 
     with open(DST_OK, "w") as fh:
-        for rec in accepted:
-            fh.write(json.dumps(rec, sort_keys=True) + "\n")
+        for key in order:
+            fh.write(json.dumps(best[key].as_record(), sort_keys=True) + "\n")
 
     with open(DST_BAD, "w") as fh:
         for line in rejected:
