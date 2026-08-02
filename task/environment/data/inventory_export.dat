@@ -6,6 +6,7 @@ ST004|SKU-00029|3|29-10-2026|{"warehouse": "A", "batch": 90} [café-221]
 ST006|SKU-00020
 ST006|SKU-00014|258|1797552000|{"warehouse": "B", "batch": 33} [note-95]
 ST001|SKU-00015|33|17-01-2026|{"warehouse": "A", "batch": 73} [café-672]
+ST001|SKU-00015|N/A|17-01-2026|{"warehouse": "A", "batch": 73, "aisle": 12} [note-999]
 ST003|SKU-00041|32|1774224000|{"warehouse": "B", "batch": 49} [note-258]
 ST001|SKU-00039|-1|15-06-2026|{'warehouse': 'B', 'batch': 31} [note-970]
 ST002|SKU-00027|161|1796256000|{"warehouse": "B", "batch": 27} [café-272]
