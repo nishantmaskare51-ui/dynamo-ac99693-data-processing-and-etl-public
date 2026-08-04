@@ -47,3 +47,5 @@ ST005|SKU-00055|270|1776643200|{'warehouse': 'C', 'batch': 68} [note-765]
 ST007|SKU-00044|N/A|07-06-2026|{'warehouse': 'B', 'batch': 81} [café-735]
 ST007|SKU-00056|456|07/03/2026|{"warehouse": "B", "batch": 75} [note-148]
 ST008|SKU-00016|471|29-03-2026|{"warehouse": "C", "batch": 59} [note-561]
+ST011|SKU-00091|12|21-06-2026|{"note": "shelf|row-3"}
+ST012|SKU-00095|7|1800500000|{'zone': "D'Souza"}

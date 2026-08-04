@@ -30,7 +30,13 @@ candidate record -- rather than a positional rule like "keep the first" or "keep
 last"; a solution that hardcodes either positional rule will fail on at least one of
 the two fixtures, since each is constructed so the opposite row wins. Getting all of
 this correct simultaneously, on data that fails in multiple independent ways per row,
-is what separates a robust ETL implementation from a brittle one.
+is what separates a robust ETL implementation from a brittle one. A further trap: two
+rows' extra_attrs values contain a literal | character or an apostrophe inside a
+string value, which defeats both a naive full-line str.split("|") (miscounts fields)
+and a naive blanket "'" -> '"' quote-swap (corrupts the value) -- correct field
+splitting must cap at 4 delimiters (extra_attrs is always last) and correct quote
+handling must parse via a real single-quoted-literal parser, not character
+substitution.
 
 The input fixture is synthetically generated to exhibit these corruption and conflict
 patterns in combination; it is not sourced from a real retailer's export. The task
@@ -40,14 +46,19 @@ export tool introduces its own encoding, date, and retry/conflict quirks.
 """
 solution_explanation = """
 Process the file line-by-line as raw bytes rather than assuming a single encoding.
-For each line: attempt UTF-8 decode, fall back to cp1252/Latin-1 on failure. Validate
-field count against the expected pipe-delimited schema before attempting to parse the
-embedded JSON blob; route rows that fail this check to rejected_rows.log rather than
-raising. Use a small format-fingerprint function to disambiguate MM/DD/YYYY,
-DD-MM-YYYY, and epoch-seconds date fields. Group by the composite key (store_id, sku,
-export_ts); when two parsed records share a key but disagree in content, keep the one
-with the higher (extra_attrs key count, has-non-null-quantity) completeness score
-rather than a positional first/last rule, breaking any remaining tie by file order.
+For each line: attempt UTF-8 decode, fall back to cp1252/Latin-1 on failure. Split
+each decoded line on at most 4 pipe characters (extra_attrs is always the final
+column, so any | inside its value must stay part of the value); validate the
+resulting field count before attempting to parse the embedded JSON blob, and route
+rows that fail this check to rejected_rows.log rather than raising. Parse extra_attrs
+by trying strict JSON first, then falling back to a real Python-literal parser (not a
+blind quote-character substitution) so values containing apostrophes or mixed
+single/double quoting still parse correctly. Use a small format-fingerprint function
+to disambiguate MM/DD/YYYY, DD-MM-YYYY, and epoch-seconds date fields. Group by the
+composite key (store_id, sku, export_ts); when two parsed records share a key but
+disagree in content, keep the one with the higher (extra_attrs key count,
+has-non-null-quantity) completeness score rather than a positional first/last rule,
+breaking any remaining tie by file order.
 """
 verification_explanation = """
 The reference solution's output is compared field-by-field against the agent's
@@ -58,7 +69,10 @@ different data is also run to catch overfit/hardcoded solutions; the public and
 hidden fixtures each contain one conflicting-duplicate pair where the opposite row
 (first vs. second in file order) is the more complete one, so a solution that
 hardcodes a positional tie-break instead of computing completeness will fail on at
-least one fixture.
+least one fixture. Both fixtures also each contain two rows whose extra_attrs value
+contains a literal | or apostrophe character, catching solutions that split on every
+| unconditionally or that quote-swap by blind character substitution instead of a
+real literal parser.
 """
 
 [verifier]

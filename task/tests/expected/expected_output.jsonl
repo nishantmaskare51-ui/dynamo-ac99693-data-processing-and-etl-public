@@ -8,6 +8,7 @@
 {"export_ts": "2026-02-17T00:00:00Z", "extra_attrs": {"batch": 34, "warehouse": "C"}, "quantity": null, "sku": "SKU-00007", "store_id": "ST006"}
 {"export_ts": "2026-02-18T00:00:00Z", "extra_attrs": {"batch": 53, "warehouse": "B"}, "quantity": 181, "sku": "SKU-00013", "store_id": "ST007"}
 {"export_ts": "2026-03-10T00:00:00Z", "extra_attrs": {"batch": 71, "warehouse": "C"}, "quantity": null, "sku": "SKU-00057", "store_id": "ST002"}
+{"export_ts": "2026-03-15T00:00:00Z", "extra_attrs": {"note": "aisle|bin-7"}, "quantity": 50, "sku": "SKU-00077", "store_id": "ST009"}
 {"export_ts": "2026-03-23T00:00:00Z", "extra_attrs": {"batch": 49, "warehouse": "B"}, "quantity": 32, "sku": "SKU-00041", "store_id": "ST003"}
 {"export_ts": "2026-04-08T00:00:00Z", "extra_attrs": {"batch": 95, "warehouse": "C"}, "quantity": null, "sku": "SKU-00010", "store_id": "ST008"}
 {"export_ts": "2026-04-20T00:00:00Z", "extra_attrs": {"batch": 9, "warehouse": "B"}, "quantity": 477, "sku": "SKU-00035", "store_id": "ST002"}
@@ -34,6 +35,7 @@
 {"export_ts": "2026-12-09T00:00:00Z", "extra_attrs": {"batch": 74, "warehouse": "C"}, "quantity": null, "sku": "SKU-00018", "store_id": "ST004"}
 {"export_ts": "2026-12-10T00:00:00Z", "extra_attrs": {"batch": 2, "warehouse": "A"}, "quantity": 161, "sku": "SKU-00009", "store_id": "ST007"}
 {"export_ts": "2026-12-18T00:00:00Z", "extra_attrs": {"batch": 33, "warehouse": "B"}, "quantity": 258, "sku": "SKU-00014", "store_id": "ST006"}
+{"export_ts": "2027-01-03T18:13:20Z", "extra_attrs": {"warehouse": "O'Brien"}, "quantity": 64, "sku": "SKU-00081", "store_id": "ST010"}
 {"export_ts": "2027-01-05T00:00:00Z", "extra_attrs": {"batch": 99, "warehouse": "B"}, "quantity": 274, "sku": "SKU-00044", "store_id": "ST001"}
 {"export_ts": "2027-01-10T00:00:00Z", "extra_attrs": {"batch": 99, "warehouse": "C"}, "quantity": 500, "sku": "SKU-00006", "store_id": "ST002"}
 {"export_ts": "2027-01-15T00:00:00Z", "extra_attrs": {"batch": 14, "warehouse": "C"}, "quantity": null, "sku": "SKU-00002", "store_id": "ST002"}

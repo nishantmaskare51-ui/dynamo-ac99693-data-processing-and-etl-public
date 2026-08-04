@@ -12,8 +12,8 @@ candidate record as a small state machine (RecordBuilder) that accumulates
 failures instead of raising early -- this keeps every field's validation
 independent so a single bad field doesn't mask what else is wrong with a row.
 """
-import csv
-import io
+import ast
+import ast
 import json
 import re
 import datetime
@@ -28,13 +28,6 @@ NULLISH = frozenset({"", "NULL", "N/A", "-1"})
 _EPOCH_RE = re.compile(r"^\d{9,10}$")
 _MDY_RE = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
 _DMY_RE = re.compile(r"^(\d{1,2})-(\d{1,2})-(\d{4})$")
-
-
-class PipeDialect(csv.Dialect):
-    delimiter = "|"
-    quoting = csv.QUOTE_NONE
-    lineterminator = "\n"
-    escapechar = None
 
 
 def sniff_and_decode(raw: bytes) -> str:
@@ -118,14 +111,26 @@ class RecordBuilder:
         blob = raw[:cutoff] if cutoff != -1 and raw.rstrip().endswith("]") else raw
         blob = blob.strip()
 
-        for candidate in (blob, blob.replace("'", '"')):
-            try:
-                parsed = json.loads(candidate)
-            except json.JSONDecodeError:
-                continue
+        try:
+            parsed = json.loads(blob)
             if isinstance(parsed, dict):
                 self.attrs = parsed
                 return
+        except json.JSONDecodeError:
+            pass
+
+        # Fall back to Python literal syntax. A blind "'" -> '"' character
+        # swap corrupts values that legitimately contain an apostrophe (e.g.
+        # a double-quoted value inside a single-quoted object); parsing the
+        # blob as a Python literal handles mixed/nested quoting correctly.
+        try:
+            parsed = ast.literal_eval(blob)
+        except (ValueError, SyntaxError):
+            self.errors.append("attrs")
+            return
+        if isinstance(parsed, dict) and all(isinstance(k, str) for k in parsed):
+            self.attrs = parsed
+            return
         self.errors.append("attrs")
 
     def as_record(self):
@@ -156,10 +161,11 @@ def iter_rows(path):
         lines = lines[1:]  # header
     for raw_line in lines:
         text = sniff_and_decode(raw_line)
-        reader = csv.reader(io.StringIO(text), dialect=PipeDialect)
-        try:
-            fields = next(reader)
-        except StopIteration:
+        # maxsplit=len(COLUMNS)-1: only extra_attrs (the final column) may
+        # legitimately contain a literal '|' inside a quoted JSON string
+        # value, so it must not be treated as a further delimiter.
+        fields = text.split("|", len(COLUMNS) - 1)
+        if fields == [""]:
             fields = []
         yield text, fields
 
