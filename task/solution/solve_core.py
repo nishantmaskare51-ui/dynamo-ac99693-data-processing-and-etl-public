@@ -13,7 +13,6 @@ failures instead of raising early -- this keeps every field's validation
 independent so a single bad field doesn't mask what else is wrong with a row.
 """
 import ast
-import ast
 import json
 import re
 import datetime
@@ -38,6 +37,44 @@ def sniff_and_decode(raw: bytes) -> str:
         except UnicodeDecodeError:
             continue
     return raw.decode("utf-8", errors="replace")
+
+
+def _find_json_boundary(raw):
+    """Return (json_blob, suffix) by walking forward from the first '{' and
+    tracking brace/bracket depth (while skipping over string contents) until
+    the depth returns to zero -- i.e. the true end of the top-level JSON
+    object. A one-line rfind('}') or rfind(' [') is fooled whenever the
+    object itself contains a nested array or object, since the LAST '}' or
+    '[' in the line may belong to that nested structure rather than to the
+    decorative suffix.
+    """
+    raw = raw.strip()
+    if not raw.startswith("{"):
+        return raw, ""
+    depth = 0
+    in_str = False
+    quote_char = ""
+    escape = False
+    for i, ch in enumerate(raw):
+        if in_str:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == quote_char:
+                in_str = False
+            continue
+        if ch in ("'", '"'):
+            in_str = True
+            quote_char = ch
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return raw[: i + 1], raw[i + 1 :].strip()
+    return raw, ""
 
 
 class RecordBuilder:
@@ -106,9 +143,11 @@ class RecordBuilder:
             self.errors.append("timestamp")
 
     def _resolve_attrs(self, raw):
-        # trailing " [note-###]" style suffix is decorative and not JSON
-        cutoff = raw.rfind(" [")
-        blob = raw[:cutoff] if cutoff != -1 and raw.rstrip().endswith("]") else raw
+        # The trailing " [note-###]" style suffix is decorative and not
+        # JSON; find the true end of the JSON object by depth-matching
+        # rather than a naive rfind, since the object itself may contain
+        # nested arrays/objects.
+        blob, _ = _find_json_boundary(raw)
         blob = blob.strip()
 
         try:

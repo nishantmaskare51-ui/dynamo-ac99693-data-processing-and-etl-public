@@ -12,6 +12,7 @@
 {"export_ts": "2026-03-23T00:00:00Z", "extra_attrs": {"batch": 49, "warehouse": "B"}, "quantity": 32, "sku": "SKU-00041", "store_id": "ST003"}
 {"export_ts": "2026-04-08T00:00:00Z", "extra_attrs": {"batch": 95, "warehouse": "C"}, "quantity": null, "sku": "SKU-00010", "store_id": "ST008"}
 {"export_ts": "2026-04-20T00:00:00Z", "extra_attrs": {"batch": 9, "warehouse": "B"}, "quantity": 477, "sku": "SKU-00035", "store_id": "ST002"}
+{"export_ts": "2026-04-22T00:00:00Z", "extra_attrs": {"tags": ["x", "y"], "warehouse": "A"}, "quantity": 30, "sku": "SKU-00101", "store_id": "ST013"}
 {"export_ts": "2026-04-23T00:00:00Z", "extra_attrs": {"batch": 9, "warehouse": "A"}, "quantity": null, "sku": "SKU-00038", "store_id": "ST004"}
 {"export_ts": "2026-05-22T00:00:00Z", "extra_attrs": {"batch": 34, "warehouse": "C"}, "quantity": null, "sku": "SKU-00054", "store_id": "ST007"}
 {"export_ts": "2026-05-23T00:00:00Z", "extra_attrs": {"batch": 71, "warehouse": "B"}, "quantity": null, "sku": "SKU-00012", "store_id": "ST007"}
@@ -40,3 +41,4 @@
 {"export_ts": "2027-01-10T00:00:00Z", "extra_attrs": {"batch": 99, "warehouse": "C"}, "quantity": 500, "sku": "SKU-00006", "store_id": "ST002"}
 {"export_ts": "2027-01-15T00:00:00Z", "extra_attrs": {"batch": 14, "warehouse": "C"}, "quantity": null, "sku": "SKU-00002", "store_id": "ST002"}
 {"export_ts": "2027-01-21T00:00:00Z", "extra_attrs": {"batch": 28, "warehouse": "B"}, "quantity": null, "sku": "SKU-00006", "store_id": "ST001"}
+{"export_ts": "2027-01-26T21:46:40Z", "extra_attrs": {"meta": {"batch": 88}, "warehouse": "A"}, "quantity": 18, "sku": "SKU-00105", "store_id": "ST014"}

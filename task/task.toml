@@ -36,7 +36,11 @@ string value, which defeats both a naive full-line str.split("|") (miscounts fie
 and a naive blanket "'" -> '"' quote-swap (corrupts the value) -- correct field
 splitting must cap at 4 delimiters (extra_attrs is always last) and correct quote
 handling must parse via a real single-quoted-literal parser, not character
-substitution.
+substitution. Another two rows nest an array or object inside extra_attrs (e.g. a
+"tags" list, or a nested object), so a one-line rfind('}') or rfind(' [') to locate
+the decorative suffix boundary is not reliable in general -- the true end of the
+extra_attrs object must be found by tracking brace/bracket depth while skipping over
+quoted-string contents.
 
 The input fixture is synthetically generated to exhibit these corruption and conflict
 patterns in combination; it is not sourced from a real retailer's export. The task
@@ -53,7 +57,11 @@ resulting field count before attempting to parse the embedded JSON blob, and rou
 rows that fail this check to rejected_rows.log rather than raising. Parse extra_attrs
 by trying strict JSON first, then falling back to a real Python-literal parser (not a
 blind quote-character substitution) so values containing apostrophes or mixed
-single/double quoting still parse correctly. Use a small format-fingerprint function
+single/double quoting still parse correctly. Locate the extra_attrs object's true end
+by walking forward from the first '{' and tracking brace/bracket depth (skipping over
+quoted-string contents) until it returns to zero, rather than searching backward for
+the last '}' or '[' -- this stays correct even when the object contains a nested
+array or object. Use a small format-fingerprint function
 to disambiguate MM/DD/YYYY, DD-MM-YYYY, and epoch-seconds date fields. Group by the
 composite key (store_id, sku, export_ts); when two parsed records share a key but
 disagree in content, keep the one with the higher (extra_attrs key count,
@@ -72,7 +80,10 @@ hardcodes a positional tie-break instead of computing completeness will fail on 
 least one fixture. Both fixtures also each contain two rows whose extra_attrs value
 contains a literal | or apostrophe character, catching solutions that split on every
 | unconditionally or that quote-swap by blind character substitution instead of a
-real literal parser.
+real literal parser. Both fixtures also each contain two rows where extra_attrs
+nests an array or object inside itself before the decorative suffix, catching
+solutions that find the JSON boundary with a naive last-brace/last-bracket search
+instead of depth-matching.
 """
 
 [verifier]

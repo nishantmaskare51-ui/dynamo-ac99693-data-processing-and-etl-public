@@ -1,8 +1,8 @@
 {
-  "n_valid_unique": 37,
+  "n_valid_unique": 39,
   "n_duplicates": 6,
   "n_truncated": 4,
   "n_badjson": 3,
   "n_rejected_total": 7,
-  "n_total_lines_in_file": 51
+  "n_total_lines_in_file": 53
 }

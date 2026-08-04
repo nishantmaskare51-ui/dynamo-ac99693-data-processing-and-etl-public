@@ -16,6 +16,7 @@
 {"export_ts": "2026-07-03T00:00:00Z", "extra_attrs": {"batch": 75, "warehouse": "B"}, "quantity": 456, "sku": "SKU-00056", "store_id": "ST007"}
 {"export_ts": "2026-07-24T00:00:00Z", "extra_attrs": {"batch": 79, "warehouse": "C"}, "quantity": 20, "sku": "SKU-00003", "store_id": "ST007"}
 {"export_ts": "2026-07-26T00:00:00Z", "extra_attrs": {"batch": 85, "warehouse": "B"}, "quantity": 409, "sku": "SKU-00057", "store_id": "ST006"}
+{"export_ts": "2026-08-18T00:00:00Z", "extra_attrs": {"tags": ["p", "q", "r"], "warehouse": "B"}, "quantity": 9, "sku": "SKU-00111", "store_id": "ST015"}
 {"export_ts": "2026-09-26T00:00:00Z", "extra_attrs": {"batch": 12, "warehouse": "A"}, "quantity": 261, "sku": "SKU-00039", "store_id": "ST006"}
 {"export_ts": "2026-09-27T00:00:00Z", "extra_attrs": {"batch": 10, "warehouse": "A"}, "quantity": 396, "sku": "SKU-00041", "store_id": "ST002"}
 {"export_ts": "2026-09-27T00:00:00Z", "extra_attrs": {"batch": 65, "warehouse": "A"}, "quantity": 71, "sku": "SKU-00032", "store_id": "ST005"}
@@ -35,3 +36,4 @@
 {"export_ts": "2027-01-17T00:00:00Z", "extra_attrs": {"batch": 85, "warehouse": "C"}, "quantity": null, "sku": "SKU-00031", "store_id": "ST008"}
 {"export_ts": "2027-01-18T00:00:00Z", "extra_attrs": {"batch": 59, "warehouse": "A"}, "quantity": 362, "sku": "SKU-00049", "store_id": "ST005"}
 {"export_ts": "2027-01-21T02:53:20Z", "extra_attrs": {"zone": "D'Souza"}, "quantity": 7, "sku": "SKU-00095", "store_id": "ST012"}
+{"export_ts": "2027-02-13T06:26:40Z", "extra_attrs": {"meta": {"zone": 5}, "warehouse": "C"}, "quantity": 41, "sku": "SKU-00119", "store_id": "ST016"}
