@@ -1,30 +1,18 @@
-### Add these lines under **Input Characteristics**
+You are given a legacy inventory export file at `/app/data/inventory_export.dat`. It was produced by merging pipe-delimited (`|`) exports from three different point-of-sale systems, and the merge introduced several data-quality problems you must handle correctly. The file has a header line (`store_id|sku|quantity|export_ts|extra_attrs`) followed by one record per line.
 
-* A logical record must be interpreted independently of the validity of preceding or subsequent records.
-* Validation and normalization of one field must not modify the interpretation of any other field except where explicitly required by this specification.
+Known issues in the input file: some rows are UTF-8, others are Latin-1 (cp1252), mixed within the same file with no per-row marker. The `export_ts` field appears in one of three formats: `MM/DD/YYYY`, `DD-MM-YYYY`, or Unix epoch seconds (a bare string of 9-10 digits), with no marker of which format a given row uses. The `extra_attrs` column holds a JSON object that is sometimes single-quoted, sometimes double-quoted, and sometimes has a decorative, non-JSON suffix appended after the object's closing brace, like ` [note-945]` or ` [café-221]` — that suffix must never contribute to the parsed object. The object may itself nest arrays or other objects as values (e.g. a list under one of its keys), and a string value inside it may contain a literal `|` or a literal apostrophe even when the object as a whole uses single-quote style elsewhere — `extra_attrs` is always the fifth and final column, so any `|` or `'` inside its value belongs to that value, not to column splitting or to the surrounding quote style. Some rows share the same `(store_id, sku, export_ts)` after normalization; treat these as duplicates of one record. Duplicates are not always byte-for-byte identical — some are retry artifacts with identical content, but others are conflicting: the same key with a different quantity or extra_attrs. When rows for a key conflict, keep the one whose `extra_attrs` object has more top-level keys (it is the more complete record); if the key-counts are tied, keep whichever of the tied rows has a non-null quantity; if still tied, keep the row that appears first in the file. The quantity field may be an empty string, the literal text `NULL`, `N/A`, or `-1` to represent a missing value. A small number of rows are cut off mid-line and do not have the full 5 pipe-delimited fields.
 
----
+Build a program that reads `/app/data/inventory_export.dat` and produces exactly these outputs:
 
-### Add this paragraph at the end of **Timestamp Rules**
+`/app/output/inventory_normalized.jsonl` — newline-delimited JSON, one object per valid, deduplicated record (any key order), containing exactly these five keys:
+- `store_id`: string, copied as-is.
+- `sku`: string, copied as-is.
+- `quantity`: integer, or `null` if the raw value was `""`, `"NULL"`, `"N/A"`, or `"-1"`. Any other non-integer value makes the row invalid.
+- `export_ts`: normalized to ISO-8601 UTC formatted exactly as `YYYY-MM-DDTHH:MM:SSZ`. Calendar-date inputs (`MM/DD/YYYY` or `DD-MM-YYYY`) become that date at `00:00:00Z`; epoch-second inputs convert to their exact UTC time. A value matching none of the three formats, or not a real calendar date, makes the row invalid.
+- `extra_attrs`: a JSON object reconstructed from the blob after accounting for both quote styles and excluding any trailing decorative suffix. A blob that still doesn't parse as a JSON object (e.g. truncated, missing a closing brace) makes the row invalid.
 
-Successful normalization is part of record validation. A timestamp that cannot be normalized unambiguously invalidates the entire record.
+A row is invalid — and must be excluded from `inventory_normalized.jsonl` — if it does not split into exactly 5 pipe-delimited fields, or if `quantity`, `export_ts`, or `extra_attrs` fails to parse per the rules above. Skip the header line entirely (it is never valid or invalid data).
 
----
+`/app/output/rejected_rows.log` — the original text of every invalid input row (decoded to a normal readable string, not raw bytes), one per line, in any order. Do not include the header line, and do not include rows that were dropped only because they were duplicates of an already-accepted valid row — only rows that failed validation belong here.
 
-### Add this paragraph immediately before **"A row is invalid if a complete JSON object cannot be reconstructed."** in **extra_attrs Rules**
-
-Only syntactic reconstruction of the outermost JSON object is required. Decorative metadata must never contribute to the parsed object, duplicate resolution, or output.
-
----
-
-### Add this as **Rule 5** under **Duplicate Resolution**
-
-5. All duplicate-resolution decisions must be deterministic and depend exclusively on information contained within the candidate records.
-
----
-
-### Add these paragraphs at the very end of **Required Outputs**
-
-The generated output files must contain only information derived from the input dataset and the rules defined in this specification.
-
-No implementation-defined behavior may influence which records are accepted, rejected, or retained.
+`/app/run.sh` — an executable file (no arguments) that reads `/app/data/inventory_export.dat` fresh each time it is invoked and (re)writes both output files above. It will later be re-run against a different input file with the same corruption patterns but different data placed at the same path, so it must implement the parsing logic generally rather than hardcoding anything specific to the file you were given.

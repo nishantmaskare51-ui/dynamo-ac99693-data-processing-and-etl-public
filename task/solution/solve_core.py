@@ -6,11 +6,14 @@ Reads /app/data/inventory_export.dat and writes:
   /app/output/inventory_normalized.jsonl
   /app/output/rejected_rows.log
 
-Design note: this parses the pipe-delimited feed using the stdlib `csv` module
-with a custom Dialect (rather than manual str.split), and represents each
-candidate record as a small state machine (RecordBuilder) that accumulates
-failures instead of raising early -- this keeps every field's validation
-independent so a single bad field doesn't mask what else is wrong with a row.
+Design note: fields are split with a bounded maxsplit (extra_attrs is always
+the final column, so it may safely contain literal '|' characters), extra_attrs
+is parsed via strict JSON with a Python-literal fallback, and its true end is
+located by brace/bracket depth-matching rather than a naive rfind. Each
+candidate record is represented as a small state machine (RecordBuilder) that
+accumulates failures instead of raising early -- this keeps every field's
+validation independent so a single bad field doesn't mask what else is wrong
+with a row.
 """
 import ast
 import json
