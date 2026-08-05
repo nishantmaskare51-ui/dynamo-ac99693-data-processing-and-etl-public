@@ -66,7 +66,10 @@ to disambiguate MM/DD/YYYY, DD-MM-YYYY, and epoch-seconds date fields. Group by 
 composite key (store_id, sku, export_ts); when two parsed records share a key but
 disagree in content, keep the one with the higher (extra_attrs key count,
 has-non-null-quantity) completeness score rather than a positional first/last rule,
-breaking any remaining tie by file order.
+breaking any remaining tie by file order. Treat the quantity field's null sentinels
+("", "NULL", "N/A", "-1") as exact matches on the raw field, not after trimming
+whitespace, so a padded variant like " NULL " correctly falls through to integer
+parsing (and fails it) instead of being silently treated as null.
 """
 verification_explanation = """
 The reference solution's output is compared field-by-field against the agent's
@@ -83,7 +86,10 @@ contains a literal | or apostrophe character, catching solutions that split on e
 real literal parser. Both fixtures also each contain two rows where extra_attrs
 nests an array or object inside itself before the decorative suffix, catching
 solutions that find the JSON boundary with a naive last-brace/last-bracket search
-instead of depth-matching.
+instead of depth-matching. Each fixture also contains one row with a whitespace-
+padded quantity sentinel (e.g. " NULL "), which is not an exact match to the
+documented literal sentinels and must therefore be rejected rather than silently
+coerced to null.
 """
 
 [verifier]

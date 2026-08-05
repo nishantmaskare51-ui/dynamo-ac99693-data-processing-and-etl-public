@@ -55,3 +55,4 @@ ST009|SKU-00077|50|03/15/2026|{"note": "aisle|bin-7"}
 ST010|SKU-00081|64|1799000000|{'warehouse': "O'Brien"}
 ST013|SKU-00101|30|04/22/2026|{"warehouse": "A", "tags": ["x", "y"]} [note-945]
 ST014|SKU-00105|18|1801000000|{"warehouse": "A", "meta": {"batch": 88}} [café-221]
+ST017|SKU-00201| NULL |04/10/2026|{"warehouse": "B"}

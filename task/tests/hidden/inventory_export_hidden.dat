@@ -51,3 +51,4 @@ ST011|SKU-00091|12|21-06-2026|{"note": "shelf|row-3"}
 ST012|SKU-00095|7|1800500000|{'zone': "D'Souza"}
 ST015|SKU-00111|9|18-08-2026|{"warehouse": "B", "tags": ["p", "q", "r"]} [note-317]
 ST016|SKU-00119|41|1802500000|{"warehouse": "C", "meta": {"zone": 5}} [café-802]
+ST018|SKU-00205|NULL |1803000000|{"warehouse": "C"}

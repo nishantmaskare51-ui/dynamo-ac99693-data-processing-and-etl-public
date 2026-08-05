@@ -107,12 +107,11 @@ class RecordBuilder:
         return self
 
     def _resolve_quantity(self, raw):
-        raw = raw.strip()
         if raw in NULLISH:
             self.quantity = None
             return
         try:
-            self.quantity = int(raw)
+            self.quantity = int(raw.strip())
         except ValueError:
             self.errors.append("quantity")
 
