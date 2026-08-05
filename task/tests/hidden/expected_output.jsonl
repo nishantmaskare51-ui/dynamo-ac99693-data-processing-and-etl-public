@@ -1,39 +1,39 @@
-{"export_ts": "2026-01-09T00:00:00Z", "extra_attrs": {"batch": 26, "warehouse": "B"}, "quantity": null, "sku": "SKU-00044", "store_id": "ST001"}
-{"export_ts": "2026-01-16T00:00:00Z", "extra_attrs": {"batch": 40, "warehouse": "B"}, "quantity": 328, "sku": "SKU-00003", "store_id": "ST006"}
-{"export_ts": "2026-02-10T00:00:00Z", "extra_attrs": {"batch": 7, "warehouse": "B"}, "quantity": 276, "sku": "SKU-00053", "store_id": "ST006"}
-{"export_ts": "2026-03-17T00:00:00Z", "extra_attrs": {"batch": 94, "warehouse": "C"}, "quantity": 468, "sku": "SKU-00010", "store_id": "ST001"}
-{"export_ts": "2026-03-29T00:00:00Z", "extra_attrs": {"batch": 59, "warehouse": "C"}, "quantity": 471, "sku": "SKU-00016", "store_id": "ST008"}
-{"export_ts": "2026-04-09T00:00:00Z", "extra_attrs": {"batch": 6, "warehouse": "C"}, "quantity": null, "sku": "SKU-00012", "store_id": "ST001"}
-{"export_ts": "2026-04-15T00:00:00Z", "extra_attrs": {"batch": 55, "warehouse": "A"}, "quantity": 186, "sku": "SKU-00045", "store_id": "ST007"}
-{"export_ts": "2026-04-20T00:00:00Z", "extra_attrs": {"batch": 55, "warehouse": "C"}, "quantity": null, "sku": "SKU-00046", "store_id": "ST005"}
-{"export_ts": "2026-04-20T00:00:00Z", "extra_attrs": {"batch": 68, "warehouse": "C"}, "quantity": 270, "sku": "SKU-00055", "store_id": "ST005"}
-{"export_ts": "2026-04-24T00:00:00Z", "extra_attrs": {"batch": 65, "warehouse": "A"}, "quantity": 489, "sku": "SKU-00027", "store_id": "ST003"}
-{"export_ts": "2026-05-05T00:00:00Z", "extra_attrs": {"batch": 69, "warehouse": "B"}, "quantity": null, "sku": "SKU-00043", "store_id": "ST002"}
-{"export_ts": "2026-05-28T00:00:00Z", "extra_attrs": {"batch": 60, "warehouse": "C"}, "quantity": 28, "sku": "SKU-00028", "store_id": "ST001"}
 {"export_ts": "2026-06-03T00:00:00Z", "extra_attrs": {"batch": 88, "warehouse": "A"}, "quantity": 99, "sku": "SKU-00059", "store_id": "ST001"}
-{"export_ts": "2026-06-07T00:00:00Z", "extra_attrs": {"batch": 81, "warehouse": "B"}, "quantity": null, "sku": "SKU-00044", "store_id": "ST007"}
-{"export_ts": "2026-06-21T00:00:00Z", "extra_attrs": {"note": "shelf|row-3"}, "quantity": 12, "sku": "SKU-00091", "store_id": "ST011"}
-{"export_ts": "2026-07-03T00:00:00Z", "extra_attrs": {"batch": 75, "warehouse": "B"}, "quantity": 456, "sku": "SKU-00056", "store_id": "ST007"}
-{"export_ts": "2026-07-24T00:00:00Z", "extra_attrs": {"batch": 79, "warehouse": "C"}, "quantity": 20, "sku": "SKU-00003", "store_id": "ST007"}
+{"export_ts": "2026-03-17T00:00:00Z", "extra_attrs": {"batch": 94, "warehouse": "C"}, "quantity": 468, "sku": "SKU-00010", "store_id": "ST001"}
 {"export_ts": "2026-07-26T00:00:00Z", "extra_attrs": {"batch": 85, "warehouse": "B"}, "quantity": 409, "sku": "SKU-00057", "store_id": "ST006"}
-{"export_ts": "2026-08-18T00:00:00Z", "extra_attrs": {"tags": ["p", "q", "r"], "warehouse": "B"}, "quantity": 9, "sku": "SKU-00111", "store_id": "ST015"}
-{"export_ts": "2026-09-26T00:00:00Z", "extra_attrs": {"batch": 12, "warehouse": "A"}, "quantity": 261, "sku": "SKU-00039", "store_id": "ST006"}
-{"export_ts": "2026-09-27T00:00:00Z", "extra_attrs": {"batch": 10, "warehouse": "A"}, "quantity": 396, "sku": "SKU-00041", "store_id": "ST002"}
-{"export_ts": "2026-09-27T00:00:00Z", "extra_attrs": {"batch": 65, "warehouse": "A"}, "quantity": 71, "sku": "SKU-00032", "store_id": "ST005"}
 {"export_ts": "2026-10-13T00:00:00Z", "extra_attrs": {"batch": 91, "warehouse": "A"}, "quantity": 134, "sku": "SKU-00048", "store_id": "ST006"}
-{"export_ts": "2026-10-27T00:00:00Z", "extra_attrs": {"batch": 82, "warehouse": "B"}, "quantity": null, "sku": "SKU-00037", "store_id": "ST006"}
-{"export_ts": "2026-10-30T00:00:00Z", "extra_attrs": {"batch": 69, "warehouse": "A"}, "quantity": 110, "sku": "SKU-00038", "store_id": "ST006"}
-{"export_ts": "2026-11-01T00:00:00Z", "extra_attrs": {"batch": 56, "warehouse": "A"}, "quantity": 458, "sku": "SKU-00037", "store_id": "ST007"}
 {"export_ts": "2026-11-05T00:00:00Z", "extra_attrs": {"batch": 56, "warehouse": "B"}, "quantity": null, "sku": "SKU-00049", "store_id": "ST001"}
-{"export_ts": "2026-11-09T00:00:00Z", "extra_attrs": {"batch": 71, "warehouse": "A"}, "quantity": 404, "sku": "SKU-00001", "store_id": "ST006"}
-{"export_ts": "2026-11-16T00:00:00Z", "extra_attrs": {"batch": 54, "warehouse": "C"}, "quantity": 490, "sku": "SKU-00026", "store_id": "ST006"}
-{"export_ts": "2026-12-11T00:00:00Z", "extra_attrs": {"batch": 83, "warehouse": "C"}, "quantity": 302, "sku": "SKU-00044", "store_id": "ST002"}
-{"export_ts": "2026-12-12T00:00:00Z", "extra_attrs": {"batch": 12, "warehouse": "A"}, "quantity": null, "sku": "SKU-00032", "store_id": "ST001"}
-{"export_ts": "2026-12-14T00:00:00Z", "extra_attrs": {"batch": 51, "warehouse": "C"}, "quantity": null, "sku": "SKU-00001", "store_id": "ST001"}
-{"export_ts": "2026-12-20T00:00:00Z", "extra_attrs": {"batch": 63, "warehouse": "B"}, "quantity": 212, "sku": "SKU-00010", "store_id": "ST005"}
-{"export_ts": "2027-01-01T00:00:00Z", "extra_attrs": {"batch": 63, "warehouse": "C"}, "quantity": 26, "sku": "SKU-00007", "store_id": "ST005"}
 {"export_ts": "2027-01-13T00:00:00Z", "extra_attrs": {"batch": 67, "warehouse": "A"}, "quantity": 460, "sku": "SKU-00046", "store_id": "ST008"}
-{"export_ts": "2027-01-17T00:00:00Z", "extra_attrs": {"batch": 85, "warehouse": "C"}, "quantity": null, "sku": "SKU-00031", "store_id": "ST008"}
+{"export_ts": "2026-09-26T00:00:00Z", "extra_attrs": {"batch": 12, "warehouse": "A"}, "quantity": 261, "sku": "SKU-00039", "store_id": "ST006"}
+{"export_ts": "2026-12-12T00:00:00Z", "extra_attrs": {"batch": 12, "warehouse": "A"}, "quantity": null, "sku": "SKU-00032", "store_id": "ST001"}
+{"export_ts": "2026-11-16T00:00:00Z", "extra_attrs": {"batch": 54, "warehouse": "C"}, "quantity": 490, "sku": "SKU-00026", "store_id": "ST006"}
+{"export_ts": "2026-10-27T00:00:00Z", "extra_attrs": {"batch": 82, "warehouse": "B"}, "quantity": null, "sku": "SKU-00037", "store_id": "ST006"}
+{"export_ts": "2026-01-16T00:00:00Z", "extra_attrs": {"batch": 40, "warehouse": "B"}, "quantity": 328, "sku": "SKU-00003", "store_id": "ST006"}
+{"export_ts": "2026-05-05T00:00:00Z", "extra_attrs": {"batch": 69, "warehouse": "B"}, "quantity": null, "sku": "SKU-00043", "store_id": "ST002"}
+{"export_ts": "2026-02-10T00:00:00Z", "extra_attrs": {"batch": 7, "warehouse": "B"}, "quantity": 276, "sku": "SKU-00053", "store_id": "ST006"}
+{"export_ts": "2026-09-27T00:00:00Z", "extra_attrs": {"batch": 65, "warehouse": "A"}, "quantity": 71, "sku": "SKU-00032", "store_id": "ST005"}
+{"export_ts": "2026-04-15T00:00:00Z", "extra_attrs": {"batch": 55, "warehouse": "A"}, "quantity": 186, "sku": "SKU-00045", "store_id": "ST007"}
+{"export_ts": "2026-04-09T00:00:00Z", "extra_attrs": {"batch": 6, "warehouse": "C"}, "quantity": null, "sku": "SKU-00012", "store_id": "ST001"}
 {"export_ts": "2027-01-18T00:00:00Z", "extra_attrs": {"batch": 59, "warehouse": "A"}, "quantity": 362, "sku": "SKU-00049", "store_id": "ST005"}
+{"export_ts": "2026-11-09T00:00:00Z", "extra_attrs": {"batch": 71, "warehouse": "A"}, "quantity": 404, "sku": "SKU-00001", "store_id": "ST006"}
+{"export_ts": "2026-04-24T00:00:00Z", "extra_attrs": {"batch": 65, "warehouse": "A"}, "quantity": 489, "sku": "SKU-00027", "store_id": "ST003"}
+{"export_ts": "2027-01-01T00:00:00Z", "extra_attrs": {"batch": 63, "warehouse": "C"}, "quantity": 26, "sku": "SKU-00007", "store_id": "ST005"}
+{"export_ts": "2026-12-14T00:00:00Z", "extra_attrs": {"batch": 51, "warehouse": "C"}, "quantity": null, "sku": "SKU-00001", "store_id": "ST001"}
+{"export_ts": "2026-05-28T00:00:00Z", "extra_attrs": {"batch": 60, "warehouse": "C"}, "quantity": 28, "sku": "SKU-00028", "store_id": "ST001"}
+{"export_ts": "2026-01-09T00:00:00Z", "extra_attrs": {"batch": 26, "warehouse": "B"}, "quantity": null, "sku": "SKU-00044", "store_id": "ST001"}
+{"export_ts": "2027-01-17T00:00:00Z", "extra_attrs": {"batch": 85, "warehouse": "C"}, "quantity": null, "sku": "SKU-00031", "store_id": "ST008"}
+{"export_ts": "2026-11-01T00:00:00Z", "extra_attrs": {"batch": 56, "warehouse": "A"}, "quantity": 458, "sku": "SKU-00037", "store_id": "ST007"}
+{"export_ts": "2026-07-24T00:00:00Z", "extra_attrs": {"batch": 79, "warehouse": "C"}, "quantity": 20, "sku": "SKU-00003", "store_id": "ST007"}
+{"export_ts": "2026-12-20T00:00:00Z", "extra_attrs": {"batch": 63, "warehouse": "B"}, "quantity": 212, "sku": "SKU-00010", "store_id": "ST005"}
+{"export_ts": "2026-10-30T00:00:00Z", "extra_attrs": {"batch": 69, "warehouse": "A"}, "quantity": 110, "sku": "SKU-00038", "store_id": "ST006"}
+{"export_ts": "2026-09-27T00:00:00Z", "extra_attrs": {"batch": 10, "warehouse": "A"}, "quantity": 396, "sku": "SKU-00041", "store_id": "ST002"}
+{"export_ts": "2026-04-20T00:00:00Z", "extra_attrs": {"batch": 55, "warehouse": "C"}, "quantity": null, "sku": "SKU-00046", "store_id": "ST005"}
+{"export_ts": "2026-12-11T00:00:00Z", "extra_attrs": {"batch": 83, "warehouse": "C"}, "quantity": 302, "sku": "SKU-00044", "store_id": "ST002"}
+{"export_ts": "2026-04-20T00:00:00Z", "extra_attrs": {"batch": 68, "warehouse": "C"}, "quantity": 270, "sku": "SKU-00055", "store_id": "ST005"}
+{"export_ts": "2026-06-07T00:00:00Z", "extra_attrs": {"batch": 81, "warehouse": "B"}, "quantity": null, "sku": "SKU-00044", "store_id": "ST007"}
+{"export_ts": "2026-07-03T00:00:00Z", "extra_attrs": {"batch": 75, "warehouse": "B"}, "quantity": 456, "sku": "SKU-00056", "store_id": "ST007"}
+{"export_ts": "2026-03-29T00:00:00Z", "extra_attrs": {"batch": 59, "warehouse": "C"}, "quantity": 471, "sku": "SKU-00016", "store_id": "ST008"}
+{"export_ts": "2026-06-21T00:00:00Z", "extra_attrs": {"note": "shelf|row-3"}, "quantity": 12, "sku": "SKU-00091", "store_id": "ST011"}
 {"export_ts": "2027-01-21T02:53:20Z", "extra_attrs": {"zone": "D'Souza"}, "quantity": 7, "sku": "SKU-00095", "store_id": "ST012"}
+{"export_ts": "2026-08-18T00:00:00Z", "extra_attrs": {"tags": ["p", "q", "r"], "warehouse": "B"}, "quantity": 9, "sku": "SKU-00111", "store_id": "ST015"}
 {"export_ts": "2027-02-13T06:26:40Z", "extra_attrs": {"meta": {"zone": 5}, "warehouse": "C"}, "quantity": 41, "sku": "SKU-00119", "store_id": "ST016"}

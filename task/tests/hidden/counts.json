@@ -3,6 +3,6 @@
   "n_duplicates": 6,
   "n_truncated": 4,
   "n_badjson": 3,
-  "n_rejected_total": 8,
-  "n_total_lines_in_file": 54
+  "n_rejected_total": 10,
+  "n_total_lines_in_file": 56
 }
