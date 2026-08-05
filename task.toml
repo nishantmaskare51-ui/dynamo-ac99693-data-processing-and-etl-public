@@ -1,0 +1,128 @@
+artifacts = ["/app/output/inventory_normalized.jsonl", "/app/output/rejected_rows.log"]  # paths the verifier reads from the agent
+
+[task]
+name = "dynamo/inventory-format-normalizer"  # required format: org/name
+description = "Normalize a corrupted multi-source inventory export file into clean JSONL"
+
+[metadata]
+# --- Pre-seeded for you when this repo was created — DO NOT EDIT ---
+category = "Data Processing and ETL"
+subcategory = "File format parsing and serialization"
+# --- Fixed for this dataset — LEAVE AS-IS ---
+model_tested = "Opus-4.8"
+agent_tested = "Terminus-2"
+# --- You fill these in ---
+task_objective = ["implement", "transform", "validate"]
+artifact_type = ["single_script_or_program", "dataset_or_tabular_file"]
+expert_time_estimate_hours = 3.5
+difficulty_explanation = """
+The core difficulty is not any single transformation but their interaction, plus several
+judgment calls that cannot be resolved by fixed rules alone.
+
+Encoding detection must happen per-row (not per-file) since rows from different source
+systems are mixed within one file. Date normalization requires disambiguating three formats
+without explicit markers. Truncated and malformed rows must be detected structurally (field
+count, JSON validity) before parsing, not via exception-driven control flow, since a naive
+implementation will either crash on the first bad row or silently corrupt data by mis-parsing
+it.
+
+Conflicting duplicates (same store_id/sku/export_ts key, but disagreeing quantity or
+extra_attrs) require a resolution policy derived from an intermediate computed value — the
+parsed completeness of each candidate record — rather than a positional rule like "keep the
+first" or "keep the last"; a solution that hardcodes either positional rule will fail on at
+least one of the two fixtures, since each is constructed so the opposite row wins.
+
+Two rows' extra_attrs values contain a literal | character or an apostrophe inside a string
+value, which defeats both a naive full-line str.split("|") (miscounts fields) and a naive
+blanket "'" -> '"' quote-swap (corrupts the value). Correct field splitting must cap at 4
+delimiters (extra_attrs is always last) and correct quote handling must parse via a real
+single-quoted-literal parser, not character substitution.
+
+Two rows nest an array or object inside extra_attrs (e.g. a "tags" list under one key, or a
+nested object). The decorative suffix on those rows itself contains brace characters (e.g.
+` [ref-{42}]`), so a naive rfind('}') or rfind(' [') to locate the suffix boundary is
+actively misled: it lands inside the suffix rather than at the true end of the JSON object.
+The only correct approach is to track brace/bracket depth while skipping over quoted-string
+contents.
+
+Two additional rows test quantity and date edge cases that naive implementations handle
+silently: a decimal quantity string (e.g. "7.5") which is not an integer and must be
+rejected, and a calendar date with a day that does not exist for that month (e.g. Feb 30),
+which must be rejected rather than silently rounded or coerced.
+
+One row in each fixture has a whitespace-padded quantity sentinel (e.g. " NULL "), which is
+not an exact match to any documented literal sentinel and must therefore be rejected rather
+than silently coerced to null.
+
+Getting all of this correct simultaneously, on data that fails in multiple independent ways
+per row, is what separates a robust ETL implementation from a brittle one.
+"""
+solution_explanation = """
+Process the file line-by-line as raw bytes rather than assuming a single encoding.
+For each line: attempt UTF-8 decode, fall back to cp1252/Latin-1 on failure. Split
+each decoded line on at most 4 pipe characters (extra_attrs is always the final
+column, so any | inside its value must stay part of the value); validate the
+resulting field count before attempting to parse the embedded JSON blob, and route
+rows that fail this check to rejected_rows.log rather than raising. Parse extra_attrs
+by trying strict JSON first, then falling back to a real Python-literal parser (not a
+blind quote-character substitution) so values containing apostrophes or mixed
+single/double quoting still parse correctly. Locate the extra_attrs object's true end
+by walking forward from the first '{' and tracking brace/bracket depth (skipping over
+quoted-string contents) until it returns to zero, rather than searching backward for
+the last '}' or '[' — the decorative suffix may itself contain brace characters, so a
+backward search is actively misled. Use a small format-fingerprint function to
+disambiguate MM/DD/YYYY, DD-MM-YYYY, and epoch-seconds date fields; validate calendar
+dates strictly so that impossible dates (e.g. Feb 30) are rejected. Group by the
+composite key (store_id, sku, export_ts); when two parsed records share a key but
+disagree in content, keep the one with the higher (extra_attrs key count,
+has-non-null-quantity) completeness score rather than a positional first/last rule,
+breaking any remaining tie by file order. Treat the quantity field's null sentinels
+("", "NULL", "N/A", "-1") as exact matches on the raw field, not after trimming
+whitespace, so a padded variant like " NULL " correctly falls through to integer
+parsing (and fails it) instead of being silently treated as null. Treat a decimal
+string like "7.5" as an invalid quantity — only bare integers are accepted.
+"""
+verification_explanation = """
+The reference solution's output is compared record-by-record against the agent's
+inventory_normalized.jsonl using order-independent fingerprinting (canonical JSON
+serialization → SHA-256), so key ordering and row ordering in the output do not
+matter. Row counts for both valid and rejected records are checked exactly against
+known ground-truth counts baked into the input fixture.
+
+A second hidden input file with the same corruption patterns but different data is
+also run to catch overfit or hardcoded solutions. The public and hidden fixtures each
+contain one conflicting-duplicate pair where the opposite row (first vs. second in
+file order) is the more complete one, so a solution that hardcodes a positional
+tie-break instead of computing completeness will fail on at least one fixture.
+
+Both fixtures each contain two rows whose extra_attrs value contains a literal | or
+apostrophe character, catching solutions that split on every | unconditionally or that
+quote-swap by blind character substitution.
+
+Both fixtures each contain two rows where extra_attrs nests an array or object inside
+itself, and the decorative suffix on those rows contains brace characters (e.g.
+`[ref-{42}]`). A naive rfind('}') lands inside the suffix and returns the wrong
+boundary, causing the parse to fail or produce a wrong object. Only depth-matching
+correctly identifies the end of the JSON object.
+
+Both fixtures each contain a row with a decimal quantity (e.g. "7.5") and a row with
+an impossible calendar date (e.g. Feb 30), each of which must be rejected. Both
+fixtures also each contain one row with a whitespace-padded quantity sentinel (e.g.
+" NULL "), which is not an exact match to any documented literal and must therefore
+be rejected rather than silently coerced to null.
+"""
+
+[verifier]
+timeout_sec = 180.0
+
+[agent]
+timeout_sec = 1800.0
+
+[environment]
+build_timeout_sec = 600.0
+cpus = 1
+memory_mb = 2048
+storage_mb = 10240
+gpus = 0
+allow_internet = true
+mcp_servers = []
