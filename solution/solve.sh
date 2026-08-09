@@ -1,9 +1,16 @@
 #!/bin/bash
-# Executable entrypoint for the inventory normalization task.
-set -e
+set -euo pipefail
 
-# Ensure output directory exists
 mkdir -p /app/output
 
-# Invoke the core processing logic
+cp /solution/solve_core.py /app/run_core.py
+
+cat > /app/run.sh << 'RUNSH'
+#!/bin/bash
+set -euo pipefail
 python3 /app/run_core.py
+RUNSH
+
+chmod +x /app/run.sh
+
+/app/run.sh
