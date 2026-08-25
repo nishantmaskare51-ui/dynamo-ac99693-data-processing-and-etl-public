@@ -1,245 +1,193 @@
-#!/usr/bin/env python3
-"""
-Reference (oracle) implementation.
-
-Reads /app/data/inventory_export.dat and writes:
-  /app/output/inventory_normalized.jsonl
-  /app/output/rejected_rows.log
-
-Design note: fields are split with a bounded maxsplit (extra_attrs is always
-the final column, so it may safely contain literal '|' characters), extra_attrs
-is parsed via strict JSON with a Python-literal fallback, and its true end is
-located by brace/bracket depth-matching rather than a naive rfind. Each
-candidate record is represented as a small state machine (RecordBuilder) that
-accumulates failures instead of raising early -- this keeps every field's
-validation independent so a single bad field doesn't mask what else is wrong
-with a row.
-"""
-import ast
 import json
+import ast
 import re
-import datetime
+from datetime import datetime, timezone
+import os
 
-SRC = "/app/data/inventory_export.dat"
-DST_OK = "/app/output/inventory_normalized.jsonl"
-DST_BAD = "/app/output/rejected_rows.log"
-
-COLUMNS = ("store_id", "sku", "quantity", "export_ts", "extra_attrs")
-NULLISH = frozenset({"", "NULL", "N/A", "-1"})
-
-_EPOCH_RE = re.compile(r"^\d{9,10}$")
-_MDY_RE = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
-_DMY_RE = re.compile(r"^(\d{1,2})-(\d{1,2})-(\d{4})$")
-
-
-def sniff_and_decode(raw: bytes) -> str:
-    """utf-8 first; cp1252 as the fallback encoding for legacy POS exports."""
-    for codec in ("utf-8", "cp1252"):
-        try:
-            return raw.decode(codec)
-        except UnicodeDecodeError:
-            continue
-    return raw.decode("utf-8", errors="replace")
-
-
-def _find_json_boundary(raw):
-    """Return (json_blob, suffix) by walking forward from the first '{' and
-    tracking brace/bracket depth (while skipping over string contents) until
-    the depth returns to zero -- i.e. the true end of the top-level JSON
-    object. A one-line rfind('}') or rfind(' [') is fooled whenever the
-    object itself contains a nested array or object, since the LAST '}' or
-    '[' in the line may belong to that nested structure rather than to the
-    decorative suffix.
+def extract_json_blob(s):
     """
-    raw = raw.strip()
-    if not raw.startswith("{"):
-        return raw, ""
+    Finds the first '{' and tracks brace depth to find the matching '}',
+    skipping characters inside single or double quotes and handling escaped quotes.
+    """
+    start = s.find('{')
+    if start == -1:
+        return None
+    
     depth = 0
-    in_str = False
-    quote_char = ""
+    in_quote = None
     escape = False
-    for i, ch in enumerate(raw):
-        if in_str:
+    
+    for i in range(start, len(s)):
+        char = s[i]
+        if in_quote:
             if escape:
                 escape = False
-            elif ch == "\\":
+            elif char == '\\':
                 escape = True
-            elif ch == quote_char:
-                in_str = False
-            continue
-        if ch in ("'", '"'):
-            in_str = True
-            quote_char = ch
-            continue
-        if ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0:
-                return raw[: i + 1], raw[i + 1 :].strip()
-    return raw, ""
+            elif char == in_quote:
+                in_quote = None
+        else:
+            if char in '"\'':
+                in_quote = char
+            elif char == '{':
+                depth += 1
+            elif char == '}':
+                depth -= 1
+                if depth == 0:
+                    return s[start:i+1]
+    return None
 
-
-class RecordBuilder:
-    """Accumulates one row's parsed fields; ok() is False if anything failed."""
-
-    def __init__(self, fields):
-        self.fields = fields
-        self.errors = []
-        self.store_id = None
-        self.sku = None
-        self.quantity = None
-        self.export_ts = None
-        self.attrs = None
-
-    def ok(self):
-        return not self.errors
-
-    def run(self):
-        if len(self.fields) != len(COLUMNS):
-            self.errors.append("field_count")
-            return self
-        store_id, sku, qty_raw, date_raw, attrs_raw = self.fields
-        self.store_id, self.sku = store_id, sku
-        self._resolve_quantity(qty_raw)
-        self._resolve_timestamp(date_raw)
-        self._resolve_attrs(attrs_raw)
-        return self
-
-    def _resolve_quantity(self, raw):
-        if raw in NULLISH:
-            self.quantity = None
-            return
-        try:
-            self.quantity = int(raw.strip())
-        except ValueError:
-            self.errors.append("quantity")
-
-    def _resolve_timestamp(self, raw):
-        raw = raw.strip()
-        m = _EPOCH_RE.match(raw)
-        if m:
-            try:
-                dt = datetime.datetime.fromtimestamp(int(raw), tz=datetime.timezone.utc)
-                self.export_ts = dt.strftime("%Y-%m-%dT%H:%M:%SZ")
-                return
-            except (ValueError, OSError):
-                pass
-        m = _MDY_RE.match(raw)
-        if m:
-            mm, dd, yyyy = (int(x) for x in m.groups())
-            self._set_date(yyyy, mm, dd)
-            return
-        m = _DMY_RE.match(raw)
-        if m:
-            dd, mm, yyyy = (int(x) for x in m.groups())
-            self._set_date(yyyy, mm, dd)
-            return
-        self.errors.append("timestamp")
-
-    def _set_date(self, yyyy, mm, dd):
-        try:
-            dt = datetime.datetime(yyyy, mm, dd)
-            self.export_ts = dt.strftime("%Y-%m-%dT00:00:00Z")
-        except ValueError:
-            self.errors.append("timestamp")
-
-    def _resolve_attrs(self, raw):
-        # The trailing " [note-###]" style suffix is decorative and not
-        # JSON; find the true end of the JSON object by depth-matching
-        # rather than a naive rfind, since the object itself may contain
-        # nested arrays/objects.
-        blob, _ = _find_json_boundary(raw)
-        blob = blob.strip()
-
-        try:
-            parsed = json.loads(blob)
-            if isinstance(parsed, dict):
-                self.attrs = parsed
-                return
-        except json.JSONDecodeError:
-            pass
-
-        # Fall back to Python literal syntax. A blind "'" -> '"' character
-        # swap corrupts values that legitimately contain an apostrophe (e.g.
-        # a double-quoted value inside a single-quoted object); parsing the
-        # blob as a Python literal handles mixed/nested quoting correctly.
-        try:
-            parsed = ast.literal_eval(blob)
-        except (ValueError, SyntaxError):
-            self.errors.append("attrs")
-            return
-        if isinstance(parsed, dict) and all(isinstance(k, str) for k in parsed):
-            self.attrs = parsed
-            return
-        self.errors.append("attrs")
-
-    def as_record(self):
-        return {
-            "store_id": self.store_id,
-            "sku": self.sku,
-            "quantity": self.quantity,
-            "export_ts": self.export_ts,
-            "extra_attrs": self.attrs,
-        }
-
-    def dedupe_key(self):
-        return (self.store_id, self.sku, self.export_ts)
-
-    def completeness_score(self):
-        """(populated attrs key count, has-non-null-quantity) — used to resolve
-        conflicting duplicates that share a key but disagree in content."""
-        attrs_count = len(self.attrs) if self.attrs else 0
-        has_qty = 1 if self.quantity is not None else 0
-        return (attrs_count, has_qty)
-
-
-def iter_rows(path):
-    with open(path, "rb") as fh:
-        body = fh.read()
-    lines = [ln for ln in body.split(b"\n") if ln.strip() != b""]
-    if lines:
-        lines = lines[1:]  # header
-    for raw_line in lines:
-        text = sniff_and_decode(raw_line)
-        # maxsplit=len(COLUMNS)-1: only extra_attrs (the final column) may
-        # legitimately contain a literal '|' inside a quoted JSON string
-        # value, so it must not be treated as a further delimiter.
-        fields = text.split("|", len(COLUMNS) - 1)
-        if fields == [""]:
-            fields = []
-        yield text, fields
-
+def parse_extra_attrs(blob):
+    """
+    Attempts to parse a string as a JSON object or a Python literal dict.
+    """
+    if not blob:
+        return None
+    # Try standard JSON first
+    try:
+        res = json.loads(blob)
+        if isinstance(res, dict):
+            return res
+    except:
+        pass
+    # Try Python literal for single-quote styles (legacy POS exports)
+    try:
+        res = ast.literal_eval(blob)
+        if isinstance(res, dict):
+            return res
+    except:
+        pass
+    return None
 
 def main():
-    best = {}  # key -> RecordBuilder currently kept for that key
-    order = []  # preserves first-seen order of keys for stable output ordering
-    rejected = []
+    input_file = '/app/data/inventory_export.dat'
+    output_jsonl = '/app/output/inventory_normalized.jsonl'
+    output_log = '/app/output/rejected_rows.log'
+    
+    os.makedirs(os.path.dirname(output_jsonl), exist_ok=True)
+    
+    if not os.path.exists(input_file):
+        return
 
-    for original_text, fields in iter_rows(SRC):
-        rec = RecordBuilder(fields).run()
-        if not rec.ok():
-            rejected.append(original_text)
+    with open(input_file, 'rb') as f:
+        lines = f.readlines()
+        
+    if not lines:
+        return
+        
+    # Skip the header line entirely
+    data_lines = lines[1:]
+    
+    valid_candidates = []
+    rejected_rows = []
+    
+    # Regex patterns for strict validation
+    int_pattern = re.compile(r'^-?\d+$')
+    epoch_pattern = re.compile(r'^\d{9,10}$')
+    dash_date_pattern = re.compile(r'^\d{2}-\d{2}-\d{4}$')
+    slash_date_pattern = re.compile(r'^\d{2}/\d{2}/\d{4}$')
+    
+    for idx, line_bytes in enumerate(data_lines):
+        # Handle mixed UTF-8 and CP1252 encodings
+        try:
+            line_str = line_bytes.decode('utf-8')
+        except UnicodeDecodeError:
+            line_str = line_bytes.decode('cp1252')
+        
+        clean_line = line_str.rstrip('\r\n')
+        
+        # 1. Structural validation: Exactly 5 fields
+        # extra_attrs is the 5th field and may contain pipes; split at most 4 times.
+        parts = clean_line.split('|', 4)
+        if len(parts) != 5:
+            rejected_rows.append(clean_line)
             continue
-        key = rec.dedupe_key()
-        if key not in best:
-            best[key] = rec
-            order.append(key)
+            
+        store_id, sku, qty_raw, ts_raw, extra_raw = parts
+        
+        # 2. Quantity validation
+        qty = None
+        if qty_raw in ("", "NULL", "N/A", "-1"):
+            qty = None
+        else:
+            if int_pattern.match(qty_raw):
+                qty = int(qty_raw)
+            else:
+                rejected_rows.append(clean_line)
+                continue
+                
+        # 3. Timestamp normalization
+        normalized_ts = None
+        try:
+            if epoch_pattern.match(ts_raw):
+                dt = datetime.fromtimestamp(int(ts_raw), tz=timezone.utc)
+                normalized_ts = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+            elif dash_date_pattern.match(ts_raw):
+                # DD-MM-YYYY
+                dt = datetime.strptime(ts_raw, '%d-%m-%Y').replace(tzinfo=timezone.utc)
+                normalized_ts = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+            elif slash_date_pattern.match(ts_raw):
+                # MM/DD/YYYY
+                dt = datetime.strptime(ts_raw, '%m/%d/%Y').replace(tzinfo=timezone.utc)
+                normalized_ts = dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        except (ValueError, OSError, OverflowError):
+            pass
+        
+        if not normalized_ts:
+            rejected_rows.append(clean_line)
             continue
-        # Conflicting duplicate: same key, different content. Keep whichever
-        # record is more complete rather than always keeping the first-seen
-        # one, so a later row can legitimately override an earlier one.
-        if rec.completeness_score() > best[key].completeness_score():
-            best[key] = rec
+            
+        # 4. Extra Attributes validation (stripping suffixes)
+        blob = extract_json_blob(extra_raw)
+        extra_attrs = parse_extra_attrs(blob)
+        
+        if extra_attrs is None:
+            rejected_rows.append(clean_line)
+            continue
+            
+        # Valid record found; store with scoring for deduplication logic
+        valid_candidates.append({
+            'store_id': store_id,
+            'sku': sku,
+            'quantity': qty,
+            'export_ts': normalized_ts,
+            'extra_attrs': extra_attrs,
+            'score': (len(extra_attrs), 1 if qty is not None else 0),
+            'index': idx
+        })
+        
+    # 5. Deduplication and Conflict Resolution
+    # Group by (store_id, sku, export_ts)
+    # Win conditions: 1. Most top-level keys 2. Non-null quantity 3. First in file
+    winners = {}
+    for cand in valid_candidates:
+        key = (cand['store_id'], cand['sku'], cand['export_ts'])
+        if key not in winners:
+            winners[key] = cand
+        else:
+            # Use strictly greater than to preserve the first-seen in case of a tie
+            if cand['score'] > winners[key]['score']:
+                winners[key] = cand
+    
+    # Sort by original index to keep relative file order if desired
+    final_records = sorted(winners.values(), key=lambda x: x['index'])
+    
+    # Output: Valid records to JSONL
+    with open(output_jsonl, 'w', encoding='utf-8') as f:
+        for rec in final_records:
+            json_line = {
+                'store_id': rec['store_id'],
+                'sku': rec['sku'],
+                'quantity': rec['quantity'],
+                'export_ts': rec['export_ts'],
+                'extra_attrs': rec['extra_attrs']
+            }
+            f.write(json.dumps(json_line) + '\n')
+            
+    # Output: Rejected rows (Original text)
+    with open(output_log, 'w', encoding='utf-8') as f:
+        for line in rejected_rows:
+            f.write(line + '\n')
 
-    with open(DST_OK, "w") as fh:
-        for key in order:
-            fh.write(json.dumps(best[key].as_record(), sort_keys=True) + "\n")
-
-    with open(DST_BAD, "w") as fh:
-        for line in rejected:
-            fh.write(line + "\n")
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
