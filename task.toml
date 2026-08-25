@@ -73,29 +73,22 @@ parsing (and fails it) instead of being silently treated as null.
 """
 verification_explanation = """
 The reference solution's output is compared field-by-field against the agent's
-inventory_normalized.jsonl after canonical key-sorting. Row counts for both valid and
-rejected records are checked exactly against known ground-truth counts baked into the
-input fixture. A second hidden input file with the same corruption patterns but
-different data is also run to catch overfit/hardcoded solutions; the public and
-hidden fixtures each contain one conflicting-duplicate pair where the opposite row
-(first vs. second in file order) is the more complete one, so a solution that
-hardcodes a positional tie-break instead of computing completeness will fail on at
-least one fixture. Both fixtures also each contain two rows whose extra_attrs value
-contains a literal | or apostrophe character, catching solutions that split on every
-| unconditionally or that quote-swap by blind character substitution instead of a
-real literal parser. Both fixtures also each contain two rows where extra_attrs
-nests an array or object inside itself before the decorative suffix, catching
-solutions that find the JSON boundary with a naive last-brace/last-bracket search
-instead of depth-matching. Each fixture also contains one row with a whitespace-
-padded quantity sentinel (e.g. " NULL "), which is not an exact match to the
-documented literal sentinels and must therefore be rejected rather than silently
-coerced to null. The verifier itself hides each fixture's answer-key files
-(expected_output.jsonl, counts.json, expected_rejected.log) from disk for the
-exact duration of the agent's run.sh invocation, checks exact valid-record line
-count (not just fingerprint-set membership) to catch duplicate-output emission,
-verifies rejected_rows.log content exactly against the true invalid input lines
-rather than just a count, and resolves symlinks before reading any agent-output
-path to prevent a symlinked output from pointing at the answer key.
+inventory_normalized.jsonl after canonical key-sorting. Both fixtures also compare the
+complete set of rejected input rows against ground truth (not just the row count), while
+row counts for valid and rejected records are checked as a consistency guard. A second
+hidden input file with the same corruption patterns but different data is also run to
+catch overfit/hardcoded solutions; the public and hidden fixtures each contain one
+conflicting-duplicate pair where the opposite row (first vs. second in file order) is
+the more complete one, so a solution that hardcodes a positional tie-break instead of
+computing completeness will fail on at least one fixture. Both fixtures also each contain
+two rows whose extra_attrs value contains a literal | or apostrophe character, catching
+solutions that split on every | unconditionally or that quote-swap by blind character
+substitution instead of a real literal parser. Both fixtures also each contain rows where
+extra_attrs nests an array or object inside itself before the decorative suffix, catching
+solutions that find the JSON boundary with a naive last-brace/last-bracket search instead
+of depth-matching. Each fixture also contains a row with a whitespace-padded quantity
+sentinel (e.g. " NULL "), which is not an exact match to the documented literal
+sentinels and must therefore be rejected rather than silently coerced to null.
 """
 
 [verifier]
