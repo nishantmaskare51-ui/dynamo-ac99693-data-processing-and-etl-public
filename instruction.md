@@ -16,4 +16,3 @@ A row is invalid — and must be excluded from `inventory_normalized.jsonl` — 
 `/app/output/rejected_rows.log` — the original text of every invalid input row (decoded to a normal readable string, not raw bytes), one per line, in any order. Do not include the header line, and do not include rows that were dropped only because they were duplicates of an already-accepted valid row — only rows that failed validation belong here.
 
 `/app/run.sh` — an executable file (no arguments) that reads `/app/data/inventory_export.dat` fresh each time it is invoked and (re)writes both output files above. It will later be re-run against a different input file with the same corruption patterns but different data placed at the same path, so it must implement the parsing logic generally rather than hardcoding anything specific to the file you were given.
-
