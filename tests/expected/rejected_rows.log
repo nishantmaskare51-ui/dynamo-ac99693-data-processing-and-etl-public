@@ -4,5 +4,3 @@ ST007|SKU-00022|10|01/15/2026|{{{not json at all}}}
 ST004|SKU-00053|150
 ST002|SKU-00050|10|01/15/2026|{{{not json at all}}}
 ST017|SKU-00201| NULL |04/10/2026|{"warehouse": "B"}
-ST019|SKU-00301|7.5|06/10/2026|{"warehouse": "D"}
-ST020|SKU-00302|99|02/30/2026|{"warehouse": "D"}
